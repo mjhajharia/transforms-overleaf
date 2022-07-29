@@ -7,7 +7,20 @@
 \usepackage{mathpazo}
 \usepackage{sourcecodepro}
 \usepackage{graphicx}
+\usepackage[dvipsnames]{xcolor}
 \usepackage{hyperref}
+    \hypersetup{
+        colorlinks=true,
+        linkcolor=MidnightBlue,
+        anchorcolor=MidnightBlue,
+        citecolor=MidnightBlue,
+        filecolor=MidnightBlue,
+        urlcolor=MidnightBlue,
+        pdftitle={Efficient Unconstraining Transforms for HMC},
+        pdfauthor={Meenal Jhajaria et al.},
+        pdfpagemode=FullScreen,
+    }
+\usepackage[title]{appendix}
 
 \newcommand{\setcomp}[2]{\left\{ #1 \ \Big|\ #2 \right\}}
 \newcommand{\rngto}[1]{1{:}#1}
@@ -46,8 +59,8 @@ integrals over densities $\pi(x)$ (e.g., Bayesian estimation or
 prediction, $p$-value calculations, etc.).  The only black-box
 techniques that work for general high-dimensional integrals are
 Markov chain Monte Carlo (MCMC) methods.  The most effective MCMC
-method in high dimensions is Hamiltonian Monte Carlo (HMC).  HMC works
-by simulating the Hamiltonian dynamics of a fictitious particle
+method in high dimensions is Hamiltonian Monte Carlo (HMC) \cite{neal2011mcmc}.
+HMC works by simulating the Hamiltonian dynamics  a fictitious particle
 representing the value being sampled coupled with a momentum term.
 
 Although it is possible to write HMC samplers that work for simply
@@ -57,31 +70,54 @@ much more challenging to do the same for complex constraints such as
 simplexes or positive definite matrices or for densities involving
 multiple constrained values.  Instead, it is far more common to map
 the constrained values to unconstrained values before sampling
-\cite{JSSv076i01}.  For example, the Probabilistic  Programming language Stan, defines distributions with an unconstrained support, in favour of making sampling an easier process. The variables with constraints (or with constrained support in this case) are transformed to an unconstrained space. Inverse transforms of these variables are used for log density adjustments. These are usually in the form of a Jacobian matrix comprised of the gradient $\frac{\partial x}{\partial y}$, where $x$ and $y$ are the constrained and unconstrained parameters respectively.
+\cite{JSSv076i01, radul2021base, fjelde2020bijectors}.  
 
-These gradients are computationally expensive, certain transforms are entirely inefficient, and some work well on certain distributions or parametrizations and vice versa. This presents the issue of selecting which transform to use
-among an infinite set of options, which is the topic of this paper. We begin by defining the general theory of transforms, followed by transforms from a unit simplex $\Delta^N$ to the $R^M$. Finally, we discuss notions of "better" transforms defined on the simplex, using statistical measures like Effective Sample Size, Leapfrog steps taken by the sampler etc.
+Our goal in this paper is to evaluate a standard and less well known transforms for constrained data types in regular use in statistical modeling.  We will evaluate transforms in the head, body, and tail of distributions in terms of computational efficiency of both the transform, its Jacobian determinant and associated gradients, the geometry induced in the unconstrained space (e.g., log convexity and conditioning), as well as Hamiltonian Monte Carlo sampling efficiency. 
 
+We consider transforms for several constrained data types, including scalars with lower- and/or upper-bounds, vectors with simplex, sum-to-zero or unit length constraints, and matrices (or their Cholesky factors) constrained to be positive definite (e.g., covariance matrices), positive definite with unit diagonal (e.g., correlation matrices), or orthonormal.  
 
+\section{Constraining transforms}
 
+In this paper, we restrict our attention to a general class of surjective constraining transforms $f : \mathcal{Y} \rightarrow \mathcal{X}$ from an unconstrained space $\mathcal{Y}$ onto a constrained space $\mathcal{X}$.  For all of our transforms, we have $\mathcal{Y} = \mathbb{R}^M$ and $\mathcal{X} \subset \mathbb{R}^N$.  Along with each transform, we have an additional (perhaps improper) density function $h(y)$ defined over $y \in \mathcal{Y}$ such that if $y \sim h(\cdot)$, then $f(x) \sim \textrm{uniform}(\mathcal{X}).$  
 
-\section{Unconstraining Transforms}
+The above definition is informal in that it's not possible to sample over an improper density.  Instead, we can characterize our end-to-end goal, which is that if we have a proper density $p_X(x)$ defined for $x \in \mathcal{X}$, then we want the induced distribution on $y$, namely
+$$
+p_Y(y) = h(y) \, p_X(f(y)),
+$$
+to be proper and be such that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
 
-To draw samples from a parameter defined on a constrained space $\mathcal{X}$ that can be uniquely parameterized by $n$ real degrees of freedom, we instead perform sampling in an unconstrained space $\mathcal{Y} \in \mathbb{R}^m$ for $m \ge n$. Let $p_Y(y)$ be an improper density function defined over $\mathcal{Y} \rightarrow(0, \infty)$ with support over all elements of $\mathcal{Y}$ and a surjective, smooth and continuous map $g: \mathcal{Y} \rightarrow \mathcal{X}$. Then, for any proper density $\pi_{X}$ over $\mathcal{X}$, the constraining transform can be defined as $\left(p_{Y}, g\right)$: $\mathcal{Y} \rightarrow \mathcal{X}$. In this case, the density $p_{Y}(y)=\pi_{Y}(y) \cdot \pi_{X}(g(y))$ is proper, and $Y \sim \pi_Y \implies g(Y) \sim \pi_X$. The required change of variables for this unconstraining transform is:
+\subsection{Bijective constraining transforms}
+
+The traditional way to define constraining transforms is through the usual change-of-variables formula.  Suppose we have a distribution $p_X(x)$ on constrained values $x \in \mathcal{X}$ and we have a smooth and bijective unconstraining transform $g : \mathcal{X} \rightarrow \mathcal{Y}$.  We then define our constraining transform $f : \mathcal{Y} \rightarrow \mathcal{X}$ as the inverse of $g$, $f = g^{-1}$.  The appropriate density on $\mathcal{Y}$ is then defined as the absolute value of the determinant of the constraining transform
 \[
-  p_Y(y) = p_X(f^{-1}(y)) \absdet{J_{f^{-1}}(y)},
+h(y) = \absdet{J_f(y)}.
+\]
+That way, for any given $p_X(x)$, we have
+\[
+p_Y(y) = p_X(f(y)) \, \absdet{J_f(y)},
 \]
 where the Jacobian of the inverse transform is defined by
 \[
-  J_{f^{-1}}(y) = \frac{\partial}{\partial y} \, f^{-1}(y)
+  J_{f^{-1}}(y) \ = \ \nabla_y \, f^{-1}(y) \ = \ \frac{\partial}{\partial y} \, f^{-1}(y).
 \]
+Because we have applied a standard change of variables adjustment, we are guaranteed that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
 
-%notion of uniformity missing
-In this paper we consider transforms where $m = n$, for which the constraining transform is defined as $(\pi_Y, f)$: $\mathcal{Y} \rightarrow \mathcal{X}$, given that $\pi_{Y}(y)=\absdet{J_{f^{-1}}(y)}$.
+\subsection{Surjective constraining transforms}
+
+Not all of our transforms are simple bijective changes of variables as described in the previous subsection.  In some cases, we will take the dimensionality of the unconstrained space $\mathcal{Y}$ to be higher than that of the constrained space $\mathcal{X}$ and thus need additional constraints to ensure the correct distributions on $\mathcal{X}$.  In all of these cases, we will have a $p_Y(y)$ defined as a product of the change-of-variables adjustment for the transform coupled with a standard normal distribution over $\mathcal{Y}$,
+\[
+  h(y) = \textrm{normal}(y \mid 0, \textrm{I}) \ \absdet{J_f(y)}.
+\]  
+In each case, we will have to ensure that $p_Y(y) = h(y) \, p_X(f(y))$ is such that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
 
 
 
-\section{Unit simplex}
+
+\section{Vector transforms}
+
+In this section, we consider transforms from unconstrained space to constrained vectors, including unit-simplex, sum-to-zero, and unit-length constraints.
+
+\subsection{Unit simplex}
 
 A unit $N$-simplex is an $N + 1$-dimensional vector of non-negative
 values that sums to one.  Simplexes are useful for representations of multinomial probabilities
@@ -99,11 +135,10 @@ freedom, because if $x$ is an $N$-simplex, then
 \[
   x_N = 1 - (x_1 + x_2 + \cdots + x_{N-1}).
 \]
-%n not n-1
 We will use $\Delta^N_-$ to denote $N$ elements of a simplex, this is sufficient to uniquely determine $\Delta^N$.
 \subsection{Stick-Breaking Transform}
 
-The Stick-Breaking transform carries forward the intuition in the stick-breaking construction for Dirichlet \cite{sethuraman1994constructive}. It is a process of recursively breaking a piece $x_i$ from a stick of unit length, where the leftover stick in the $i^{th}$ iteration is $ 1 - \sum_{1}^{i}x$. Let $y = f(x)$, then we define the stick-breaking mapping $ f \colon \Delta^{N-1} \to  R^{N-1}$, for $1 \leq i \leq N$ as:	
+The stick-breaking transform carries forward the intuition in the stick-breaking construction for Dirichlet \cite{sethuraman1994constructive}. It is a process of recursively breaking a piece $x_i$ from a stick of unit length, where the leftover stick in the $i^{th}$ iteration is $ 1 - \sum_{1}^{i}x$. Let $y = f(x)$, then we define the stick-breaking mapping $ f \colon \Delta^{N-1} \to  R^{N-1}$, for $1 \leq i \leq N$ as:	
 \[
 y_i
 = \mathrm{logit}(z_i) - \mbox{log}\left(\frac{1}{N-i}
@@ -113,7 +148,7 @@ y_i
 for break proportion 
 \[ 
  z_i = \frac{x_i}{1 - \sum_{i' = 1}^{i-1} x_{i'}}.
-\]\\
+\]
 
 The inverse transform $ f^{-1} \colon R^{N-1} \to \Delta^{N-1}$ is defined as:
 
@@ -123,12 +158,13 @@ x_i = \left( 1 - \sum_{i'=1}^{i-1} x_{i'} \right)\\
 
 for break proportion \[z_i = \mathrm{logit}^{-1} \left( y_i  + \log \left( \frac{1}{N - i}
                                             \right)\right)
-                                            \]\\
+\]
                                             
 The determinant of the Jacobian
 \[
    \abs{\mathbf{J}} = \prod_{i=1}^{N-1}z_i\,(1 - z_i)\left(1 - \sum_{i'=1}^{i-1} x_{i'}\right)
 \]
+
 \subsection{Additive log ratio transform}
 The unconstraining transform for the identified softmax is known as
 the additive log ratio (ALR) transform
@@ -159,7 +195,7 @@ where for $u \in \mathbb{R}^N$,
   \, \left( \frac{1}{1 + \sum(\exp(y))} \right)^N
 \]
 \subsection{Augmented-Softmax Transform}
-% Needs to be written like other transforms -> transform, inverse, |J|
+%TODO:  Needs to be written like other transforms -> transform, inverse, |J|
 We define the transformation
 $\phi: \mathbb{R}^n \to \Delta^{N} \times \mathbb{R}_{>0}: y \mapsto
 (x_-, r)$, where  $\Delta_{-}^N$ and $x_{-}$  denote $N$ elements of the simplex and $x$, respectively. Here $r = \sum_{i=1}^n \textrm{exp}(y_i)$,
@@ -172,28 +208,47 @@ $|I_{N-1} - x_- \boldsymbol{1}_{N-1}^\top| = 1 -
 \boldsymbol{1}_{N-1}^\top x_- = 1 - \sum_{i=1}^{N-1} x_i = x_N$, so
 $$ |J| = x_n \prod_{i=1}^{N-1} x_i = \prod_{i=1}^{N} x_i = \exp\left(\sum_{i=1}^{N-1} y_i\right) \left(1 + \sum_{i=1}^{N-1} e^{y_i}\right)^{-N}$$
 
+%TODO: better captions
 \section{Results}
-\begin{figure}[h!]
+
+\begin{table}[!ht]
+    \centering
+    \begin{tabular}{|l|l|l|l|l|}
+    \hline
+        ~ & stan & softmax-augmented & softmax & stickbreaking \\ \hline
+        $\alpha = 0.1, \, N = 10$ & 6.908s & 11.712s & 10.548s & 13.386s \\ 
+        $\alpha = 0.1, \, N = 100$ & 74.274s & 33.757s & 61.826s & 159.016s \\ 
+        $\alpha = 0.1, \, N = 1000$ & 1108.48s & 307.463s & 657.791s & 11773.4s \\ 
+        $\alpha = 1, \, N = 10$ & 4.072s & 6.328s & 5.337s & 5.67s \\ 
+        $\alpha = 1, \, N = 100$ & 20.805s & 27.151s & 25.94s & 51.45s \\ 
+        $\alpha = 1, \, N = 1000$ & 306.942s & 171.824s & 184.126 & 3023.24 \\ 
+        $\alpha = 10, \, N = 10$ & 4.123s & 6.375s & 5.563s & 5.606s \\ 
+        $\alpha = 10, \, N = 100$ & 23.6s & 29.091s & 30.747s & 48.834s \\ 
+        $\alpha = 10, \, N = 1000$ & 205s.627 & 161.11s & 150.751s & 1866.83s \\ \hline
+    \end{tabular}
+\end{table}
+
+\begin{figure}[t!]
     \centering
     \includegraphics[width=1.2\textwidth]{figures/simplex/ess_density.png}
     \caption{Probability Density plot of Effective Sample Size/Total LeapFrog Steps. Effective sample size is evaluated at 100 runs, each point is the value of ESS/Total Leapfrog steps taken by the sampler in one run.}
     \label{fig:ess_density}
 \end{figure}
-\newpage
-\begin{figure}[h!]
+
+\begin{figure}[t!]
     \centering
     \includegraphics[width=1.2\textwidth]{figures/simplex/ess_cdf.png}
     \caption{Cumulative Density plot of Effective Sample Size/Total LeapFrog Steps. Effective sample size is evaluated at 100 runs, each point is the value of ESS/Total Leapfrog steps taken by the sampler in one run.}
     \label{fig:ess_cdf}
 \end{figure}
 
-\begin{figure}[h!]
+\begin{figure}[t!]
     \centering
     \includegraphics[width=1.2\textwidth]{figures/simplex/rmse.png}
     \caption{Root Mean Squared Error vs Cumulative Leapfrog Steps. At every iteration in a run, cumulative mean of samples is used to calculate RMSE, which is plotted against the cumulative leapfrog steps till that iteration}
     \label{fig:rmse}
 \end{figure}
-\clearpage
+
 \subsubsection*{Acknowledgements}
 
 We would like to thank \url{matrixcalculus.org} for providing an
