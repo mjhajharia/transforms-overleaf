@@ -78,7 +78,7 @@ We consider transforms for several constrained data types, including scalars wit
 
 \section{Constraining transforms}
 
-In this paper, we restrict our attention to a general class of surjective constraining transforms $f : \mathcal{Y} \rightarrow \mathcal{X}$ from an unconstrained space $\mathcal{Y}$ onto a constrained space $\mathcal{X}$.  For all of our transforms, we have $\mathcal{Y} = \mathbb{R}^M$ and $\mathcal{X} \subset \mathbb{R}^N$.  Along with each transform, we have an additional (perhaps improper) density function $h(y)$ defined over $y \in \mathcal{Y}$ such that if $y \sim h(\cdot)$, then $f(x) \sim \textrm{uniform}(\mathcal{X}).$  
+In this paper, we restrict our attention to a general class of surjective constraining transforms $f : \mathcal{Y} \rightarrow \mathcal{X}$ from an unconstrained space $\mathcal{Y}$ onto a constrained space $\mathcal{X}$.  For all of our transforms, we have $\mathcal{Y} = \mathbb{R}^M$ and $\mathcal{X} \subset \mathbb{R}^N$.  Along with each transform, we have an additional (perhaps improper) density function $h(y)$ defined over $y \in \mathcal{Y}$ such that if $y \sim h(\cdot)$, then $f(y) \sim \textrm{uniform}(\mathcal{X}).$  
 
 The above definition is informal in that it's not possible to sample over an improper density.  Instead, we can characterize our end-to-end goal, which is that if we have a proper density $p_X(x)$ defined for $x \in \mathcal{X}$, then we want the induced distribution on $y$, namely
 $$
@@ -164,7 +164,6 @@ The determinant of the Jacobian
 \[
    \abs{\mathbf{J}} = \prod_{i=1}^{N-1}z_i\,(1 - z_i)\left(1 - \sum_{i'=1}^{i-1} x_{i'}\right)
 \]
-
 \subsection{Additive log ratio transform}
 The unconstraining transform for the identified softmax is known as
 the additive log ratio (ALR) transform
