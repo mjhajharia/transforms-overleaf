@@ -203,6 +203,7 @@ Absolute determinant of the diagonal matrix $\mathbf{J}$ is the product of its d
 
 The correction term $p_Y(y) = p_X(f^{-1}(y))\,
 \prod_{i=1}^{N-1}z_i\,(1 - z_i)\left(1 - \sum_{i'=1}^{i-1} x_{i'}\right).$
+
 \subsection{Additive log ratio transform}
 
 The unconstraining transform for the identified softmax is known as
@@ -254,6 +255,58 @@ for the change of variables, which yields
 where $J_{s}(y)$ is the Jacobian of the function $s$ evaluated at $y$
 and $\absdet{J_s(y)}$ is the absolute value of its determinant.
 
+\subsection{Isometric Log Ratio Transform}
+
+We may define a distance preserving transformation from $\textrm{ilr}:\Delta^{N-1} \rightarrow \mathbb{R}^{N-1}$ called an isometric log ratio transform. By noting that the ALR transformation may be written as
+
+\[
+  \begin{aligned}
+ \textrm{alr}(x) &= \begin{bmatrix}\displaystyle
+    \log \frac{x_1}{x_N} \cdots \log \frac{x_{N-1}}{x_N}
+  \end{bmatrix} \\
+  &= \log(\mathbf{x}) \cdot \begin{bmatrix}\displaystyle
+                    1 & 0 & \cdots & 0 \\
+                    0 & 1 & \cdots & 0 \\
+                    \vdots & \vdots & \ddots & \vdots \\
+                    0 & 0 & \cdots & 1 \\
+                    -1 & -1 & \cdots & -1
+                    \end{bmatrix}.
+  \end{aligned}
+\]
+Take any unitary matrix $\mathbf{V} \in D \times D - 1$ then the ILR is defined for $x \in \Delta^{N-1}$ by
+\[
+  \textrm{ilr}(x)
+  = \log(\mathbf{x}) \cdot \mathbf{V}.
+\]
+
+Unitary $\mathbf{V}$ matrices may be constructed through the Gram-Schmidt process or by normalizing the rows of a Helmert contrast matrix using the L2 norm.
+
+The inverse isometric log ratio transform maps values in
+$\mathbb{R}^{N-1}$ to $\Delta^{N-1}$ defined for $y \in
+\mathbb{R}^{N-1}$ by
+\[
+  \textrm{ilr}^{-1}(y)
+  = \textrm{softmax}(\begin{bmatrix} \exp(\mathbf{V^{-1}} \mathbf{x} ) \end{bmatrix}),
+\]
+where for $u \in \mathbb{R}^N$,
+\[
+  \textrm{softmax}(u) = \frac{\exp(u)}{\textrm{sum}(\exp(u))}.
+\]
+
+The affine transformation of the multiplication by the inverse unitary matrix does not change
+the calculation of the change of variables adjustment proceeds similarly to the ALR case. In fact, any affine transformation may be completed at this stage which generalizes the ILR to power transformations as in \cite{tsagris2011data}\footnote{
+   Let $\alpha$ be the scalar power transformation parameter in $\mathbb{R}$ then the inverse \textit{power} based transformation is given by $(V^{-1} \mathbf{x} \alpha + 1) / \alpha$. See \cite{tsagris2011data} for more information.
+}. 
+
+Given a density $p_X(x)$ defined over simplices $x \in \Delta^{N-1}$,
+we can transform to a density over unconstrained parameters $y \in
+\mathbb{R}^{N-1}$ by applying the inverse ILR transform and adjusting
+for the change of variables, which yields
+\[
+  p_Y(y) = p_X(\textrm{ilr}^{-1}(y)) \absdet{J_{s}(y)},
+\]
+where $J_{s}(y)$ is the Jacobian of the function $s$ evaluated at $y$
+and $\absdet{J_s(y)}$ is the absolute value of its determinant.
 
 \subsubsection{Softmax Transform}
 
@@ -869,7 +922,6 @@ where $f(\Lambda)_{ij} = f(\lambda_i)\delta_{ij}$.
   In a similar way, we can generalize other scalar functions like the inverse, trigonometric, and hyperbolic functions to functions of matrices.
   All results in this section apply to these functions as well.
 }
-
 For such functions $f$, we can compute a common form of the Jacobian determinant.
 Differentiating the expression, we find
 \[

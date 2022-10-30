@@ -9,6 +9,12 @@
 \usepackage{graphicx}
 \usepackage[dvipsnames]{xcolor}
 \usepackage{hyperref}
+  \hypersetup{
+    colorlinks=true,
+    allcolors=MidnightBlue,
+    pdftitle={Efficient unconstraining parameter transforms for Hamiltonian Monte Carlo},
+    pdfpagemode=FullScreen
+  }
 \usepackage[title]{appendix}
 
 \newcommand{\setcomp}[2]{\left\{ #1 \ \Big|\ #2 \right\}}
@@ -23,13 +29,23 @@
 \begin{document}
 
 
-\title{Efficient Unconstraining
-  Parameter Transforms for Hamiltonian Monte Carlo}
-\author{Meenal Jhajharia \\ \small Flatiron Institute 
-\and Seth Axen \\ \small University of T\"ubingen 
-\and Adam Haber \\ \small Weizmann Institute 
-\and Sean Pinkney \\ \small Omnicom Media Group
-\and Bob Carpenter \\ \small Flatiron Institute}
+\title{Efficient Simplex Parameterizations for Hamiltonian Monte Carlo}
+\author{Meenal Jhajharia
+        \\ \small Center for Computational Mathematics
+        \\ \small Flatiron Institute
+\and \large Seth D. Axen
+     \\ \small Cluster of Excellence Machine Learning
+     \\ \small New Perspectives for Science
+     \\ \small University of T\"ubingen
+\and Adam Haber
+     \\ \small Weizmann Institute of Science
+\and Sean Pinkney
+     \\ \small Center of Excellence
+     \\ \small Omnicom Media Group
+\and Bob Carpenter
+     \\ \small Center for Computational Mathematics
+     \\ \small Flatiron Institute
+}
 \date{DRAFT: \today}
 \maketitle
 
@@ -48,7 +64,7 @@ prediction, $p$-value calculations, etc.).  The only black-box
 techniques that work for general high-dimensional integrals are
 Markov chain Monte Carlo (MCMC) methods.  The most effective MCMC
 method in high dimensions is Hamiltonian Monte Carlo (HMC) \cite{neal2011mcmc}.
-HMC works by simulating the Hamiltonian dynamics  a fictitious particle
+HMC works by simulating the Hamiltonian dynamics of a fictitious particle
 representing the value being sampled coupled with a momentum term.
 
 Although it is possible to write HMC samplers that work for simply
@@ -60,15 +76,15 @@ multiple constrained values.  Instead, it is far more common to map
 the constrained values to unconstrained values before sampling
 \cite{JSSv076i01, radul2021base, fjelde2020bijectors}.  
 
-Our goal in this paper is to evaluate a standard and less well known transforms for constrained data types in regular use in statistical modeling.  We will evaluate transforms in the head, body, and tail of distributions in terms of computational efficiency of both the transform, its Jacobian determinant and associated gradients, the geometry induced in the unconstrained space (e.g., log convexity and conditioning), as well as Hamiltonian Monte Carlo sampling efficiency. 
+Our goal in this paper is to evaluate both standard and less well known transforms for constrained data types in regular use in statistical modeling.  We will evaluate transforms in the head, body, and tail of distributions in terms of computational efficiency of the transform, its Jacobian determinant and associated gradients, the geometry induced in the unconstrained space (e.g., log convexity and conditioning), as well as HMC sampling efficiency. 
 
-We consider transforms for several constrained data types, including scalars with lower- and/or upper-bounds, vectors with simplex, sum-to-zero or unit length constraints, and matrices (or their Cholesky factors) constrained to be positive definite (e.g., covariance matrices), positive definite with unit diagonal (e.g., correlation matrices), or orthonormal.  
+We consider transforms for several constrained data types, including scalars with lower- and/or upper-bounds; vectors with simplex, sum-to-zero, or unit length constraints; and matrices (or their Cholesky factors) constrained to be positive definite (e.g., covariance matrices), positive definite with unit diagonal (e.g., correlation matrices), or orthonormal.  
 
 \section{Constraining transforms}
 
-In this paper, we restrict our attention to a general class of surjective constraining transforms $f : \mathcal{Y} \rightarrow \mathcal{X}$ from an unconstrained space $\mathcal{Y}$ onto a constrained space $\mathcal{X}$.  For all of our transforms, we have $\mathcal{Y} = \mathbb{R}^M$ and $\mathcal{X} \subset \mathbb{R}^N$.  Along with each transform, we have an additional (perhaps improper) density function $h(y)$ defined over $y \in \mathcal{Y}$ such that if $y \sim h(\cdot)$, then $f(y) \sim \textrm{uniform}(\mathcal{X}).$  
+In this paper, we restrict our attention to a general class of surjective constraining transforms $f : \mathcal{Y} \rightarrow \mathcal{X}$ from an unconstrained space $\mathcal{Y}$ onto a constrained space $\mathcal{X}$.  For all of our transforms, we have $\mathcal{Y} = \mathbb{R}^M$ and $\mathcal{X} \subset \mathbb{R}^N$.  Along with each transform, we have an additional (perhaps improper) density function $h(y)$ defined over $y \in \mathcal{Y}$ such that if $y \sim h(\cdot)$, then $f(y) \sim \textrm{uniform}(\cdot \mid \mathcal{X})$.  
 
-The above definition is informal in that it's not possible to sample over an improper density.  Instead, we can characterize our end-to-end goal, which is that if we have a proper density $p_X(x)$ defined for $x \in \mathcal{X}$, then we want the induced distribution on $y$, namely
+The above definition is informal in that it is not possible to sample over an improper density.  Instead, we can characterize our end-to-end goal, which is that if we have a proper density $p_X(x)$ defined for $x \in \mathcal{X}$, then we want the induced distribution on $y$, namely, the one with the density function
 $$
 p_Y(y) = h(y) \, p_X(f(y)),
 $$
@@ -76,7 +92,7 @@ to be proper and be such that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)
 
 \subsection{Bijective constraining transforms}
 
-The traditional way to define constraining transforms is through the usual change-of-variables formula.  Suppose we have a distribution $p_X(x)$ on constrained values $x \in \mathcal{X}$ and we have a smooth and bijective unconstraining transform $g : \mathcal{X} \rightarrow \mathcal{Y}$.  We then define our constraining transform $f : \mathcal{Y} \rightarrow \mathcal{X}$ as the inverse of $g$, $f = g^{-1}$.  The appropriate density on $\mathcal{Y}$ is then defined as the absolute value of the determinant of the constraining transform
+The conventional way to define constraining transforms is through the change-of-variables formula.  Suppose we have a distribution $p_X(x)$ on constrained values $x \in \mathcal{X}$ and we have a smooth and bijective unconstraining transform $g : \mathcal{X} \rightarrow \mathcal{Y}$.  We then define our constraining transform $f : \mathcal{Y} \rightarrow \mathcal{X}$ as the inverse of $g$, $f = g^{-1}$.  The induced density on $\mathcal{Y}$ is adjusted by a factor of the absolute value of the determinant of the Jacobian of the constraining transform,
 \[
 h(y) = \absdet{J_f(y)}.
 \]
@@ -88,18 +104,30 @@ where the Jacobian of the inverse transform is defined by
 \[
   J_{f^{-1}}(y) \ = \ \nabla_y \, f^{-1}(y) \ = \ \frac{\partial}{\partial y} \, f^{-1}(y).
 \]
-Because we have applied a standard change of variables adjustment, we are guaranteed that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
+With this standard change of variables adjustment, we are guaranteed that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
 
 \subsection{Surjective constraining transforms}
 
-Not all of our transforms are simple bijective changes of variables as described in the previous subsection.  In some cases, we will take the dimensionality of the unconstrained space $\mathcal{Y}$ to be higher than that of the constrained space $\mathcal{X}$ and thus need additional constraints to ensure the correct distributions on $\mathcal{X}$.  In all of these cases, we will have a $p_Y(y)$ defined as a product of the change-of-variables adjustment for the transform coupled with a standard normal distribution over $\mathcal{Y}$,
+Not all of our transforms are smooth, bijective changes of variables as described in the previous subsection.  In some cases, we will take the dimensionality of the unconstrained space $\mathcal{Y}$ to be higher than that of the constrained space $\mathcal{X}$ and thus need additional constraints to ensure the correct distributions on $\mathcal{X}$.
+In each of these cases, we seek to construct an expanded parameter space $\mathcal{Z} = \mathcal{X} \times \mathcal{R}$ with parameters $z = (x, r)$ for newly introduced constrained parameters $r \in \mathcal{R}$.
+$\mathcal{R}$ is chosen so that the new constrained space $\mathcal{Z}$ has the same dimensionality as $\mathcal{Y}$.
+Then, we choose a prior $p_R(r | x)$ so that
 \[
-  h(y) = \textrm{normal}(y \mid 0, \textrm{I}) \ \absdet{J_f(y)}.
-\]  
-In each case, we will have to ensure that $p_Y(y) = h(y) \, p_X(f(y))$ is such that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
+p_Y(y) = h(y) p_Z(z) = h(y) p_X(x) p_R(r | x).
+\]
+We then choose a bijective transform $\tilde{g}: \mathcal{Z} \to \mathcal{Y}$ and its inverse $\tilde{f}$, where $\tilde{f}(y)_1 = f(y)$, that allows us to apply the usual bijective change-of-variables approach:
+\[
+h(y) = |J_{\tilde{f}}(y)|
+\]
+Discarding $r$ after sampling is equivalent to marginalizing it out, and in practice, $r$ may never be directly computed.
+It is convenient to choose $p_R(r | x) = p_R(r)$, and we do so in this paper. 
 
-
-
+% In all of these cases, we will have a $p_Y(y)$ defined as a product of the change-of-variables adjustment for the transform coupled with a standard normal distribution over $\mathcal{Y}$,
+% \[
+%   h(y) = \textrm{normal}(y \mid 0, \textrm{I}) \, \absdet{J_f(y)},
+% \]  
+% where $\textrm{I}$ is the identity matrix.
+% For each case, we have to ensure that $p_Y(y) = h(y) \, p_X(f(y))$ is such that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
 
 \section{Vector transforms}
 
@@ -107,52 +135,45 @@ In this section, we consider transforms from unconstrained space to constrained 
 
 \subsection{Unit simplex}
 
-A unit $N$-simplex is an $N + 1$-dimensional vector of non-negative
-values that sums to one.  Simplexes are useful for representations of multinomial probabilities
-(e.g., probabilities of categories in a classification problem). The set of unit $N$-simplexes is conventionally denoted
+Simplexes are useful for representations of multinomial probabilities - points on the standard $N$-simplex in $R^{N+1}$ are the space of possible parameters (probabilities) of the categorical distribution on $n+1$ possible outcomes. The set of unit simplexes of dimension $N$ is
 \[
-  \Delta^N = \setcomp{x \in \mathbb{R}_{\ge 0}^{N + 1}}{ \sum_{i=1}^{N} x_i = 1}
+  \Delta^N = \setcomp{x \in \mathbb{R}^{N + 1}}{x_n \geq 0 \textrm{ for } 1 \leq n \leq N+1 \textrm{ and } \sum_{n=1}^{N + 1} x_n = 1}
 \]
-Geometrically, an $N$-simplex is the convex closure of $N+1$ points
-that are 1 in one coordinate and 0 elsewhere.  For example, the
-3-simplex is the complex closure of
+Geometrically, $\Delta^N$ is the convex closure of $N+1$ ``one hot'' points that take value one in one coordinate and zero elsewhere.  For example, $\Delta^2$ is the convex closure of the three vectors
 $\begin{bmatrix}1 & 0 & 0 \end{bmatrix},
 \begin{bmatrix} 0 & 1 & 0 \end{bmatrix}$,
 and $\begin{bmatrix} 0 & 0 & 1 \end{bmatrix}$. As such, there are only $N$ degrees of
 freedom, because if $x$ is an $N$-simplex, then
 \[
-  x_N = 1 - (x_1 + x_2 + \cdots + x_{N-1}).
+  x_{N+1} = 1 - (x_1 + x_2 + \cdots + x_N).
 \]
-We will use $\Delta^N_-$ to denote $N$ elements of a simplex, this is sufficient to uniquely determine $\Delta^N$.
-\subsection{Stick-Breaking Transform}
-
-The stick-breaking transform carries forward the intuition in the stick-breaking construction for Dirichlet \cite{sethuraman1994constructive}. It is a process of recursively breaking a piece $x_i$ from a stick of unit length, where the leftover stick in the $i^{th}$ iteration is $ 1 - \sum_{1}^{i}x$. Let $y = f(x)$, then we define the stick-breaking mapping $ f \colon \Delta^{N-1} \to  R^{N-1}$, for $1 \leq i \leq N$ as:	
+We introduce the notation $\Delta^N_-$ to denote the first $N$ elements of a simplex, i.e., a sequence of non-negative integers that sum to less than or equal to one.
 \[
-y_i
-= \mathrm{logit}(z_i) - \mbox{log}\left(\frac{1}{N-i}
-   \right) 
-   \]
-  
-for break proportion 
-\[ 
- z_i = \frac{x_i}{1 - \sum_{i' = 1}^{i-1} x_{i'}}.
+\Delta^N_-
+= 
+\setcomp{x \in \mathbb{R}^N}{x_n \geq 0 \textrm{ for } 1 \leq n \leq N \textrm{ and } \sum_{n=1}^N x_n \leq 1}.
 \]
-
-The inverse transform $ f^{-1} \colon R^{N-1} \to \Delta^{N-1}$ is defined as:
-
+There is a bijective mapping between $\Delta^N_-$ and $\Delta^N$ defined for $x \in \Delta^N_-$ by 
 \[
-x_i = \left( 1 - \sum_{i'=1}^{i-1} x_{i'} \right)\\
+f(x) = \begin{bmatrix} x_1 & x_2 & \cdots x_N & 1 - \sum_{n=1}^N x_n \end{bmatrix}.
 \]
 
-for break proportion \[z_i = \mathrm{logit}^{-1} \left( y_i  + \log \left( \frac{1}{N - i}
-                                            \right)\right)
-\]
-                                            
-The determinant of the Jacobian
-\[
-   \abs{\mathbf{J}} = \prod_{i=1}^{N-1}z_i\,(1 - z_i)\left(1 - \sum_{i'=1}^{i-1} x_{i'}\right)
-\]
-\subsection{Additive log ratio transform}
+\subsection{Aitchison Geometry}
+
+Compositional data analysis deals with vectors of strictly positive quantities that adhere to a constant sum constraint. \cite{aitchison1982statistical} defined compositional data on a simplical space:
+$$
+\Delta^N=\left\{\mathbf{x}=\left[x_1, x_2, \ldots, x_D\right] \in \mathbb{R}^N \mid x_i>0, i=1,2, \ldots, N ; \sum_{i=1}^N x_i=\kappa\right\}
+$$
+
+Relative information enclosed in compositional data is preserved under non-negative scalar multiplication, thus we often consider $\mathcal{S}^D$ to be a standard simplex, where the constant $\kappa$ is 1. This can be achieved by normalization, defined by a closure operator in Aitchison Geometry as follows:
+$$
+\mathcal{C}\left[x_1, x_2, \ldots, x_N\right]=\left[\frac{x_1}{\sum_{i=1}^N x_i}, \frac{x_2}{\sum_{i=1}^N x_i}, \ldots, \frac{x_N}{\sum_{i=1}^N x_i}\right].
+$$
+
+Aitchison defines three linear isomorphisms on this simplex - Additive Log Ratio, Centered Log Ratio and Isometric Log Ratio. In the rest of the paper, we discuss transforms on the simplex - including these three classical ones or augmented forms of them that are bijective.
+
+
+\subsubsection{Additive log ratio transform}
 The unconstraining transform for the identified softmax is known as
 the additive log ratio (ALR) transform
 \cite{aitchison1982statistical}, which is a bijection
@@ -161,7 +182,7 @@ $x \in \Delta^{N-1}$ by
 \[
   \textrm{alr}(x)
   = \begin{bmatrix}\displaystyle
-    \log \frac{x_1}{x_N} \cdots \log \frac{x_{N-1}}{x_N}
+    \log \frac{x_1}{x_N}, \cdots , \log \frac{x_{N-1}}{x_N}
   \end{bmatrix}
 \]
 The inverse additive log ratio transform maps values in
@@ -174,58 +195,248 @@ $\mathbb{R}^{N-1}$ to $\Delta^{N-1}$ defined for $y \in
 where for $u \in \mathbb{R}^N$,
 
 \[
-  \textrm{softmax}(u) = \frac{exp(u)}{\sum exp(u)}
+  \textrm{softmax}(u) = \frac{\exp(u)}{\sum \exp(u)}
 \]
 
 \[
 \textrm{Here, } \abs{J} = \prod \exp(y)
   \, \left( \frac{1}{1 + \sum(\exp(y))} \right)^N
 \]
-\subsection{Augmented-Softmax Transform}
+
+Geometrically, coordinates obtained from an Additive Log Ratio transform do not correspond to an orthogonal basis, rather it is an oblique basis with respect to the Aitchison metric. Also, the transform is not symmetrical in all the N components, rather only the first N-1. This distorts euclidean distances measured from the ALR coordinates
+\subsubsection{Stick-Breaking Transform}
+
+The stick-breaking transform is derived from the standard construction for Dirichlet processes \cite{sethuraman1994constructive}. The inverse mapping from unconstrained to constrained parameters involves taking a unit-length stick and recursively breaking pieces off until it is divided into $N + 1$ pieces, the lengths of which provide the entries in the simplex.  Following the transforms used by Stan \cite{stan2022ref}, we add an offset so that the unconstraining transform of the uniform simplex $x = \begin{bmatrix} 1/N & \cdots & 1/N \end{bmatrix}$ maps to $y = \begin{bmatrix} 0 & \cdots & 0 \end{bmatrix}$, a vector of zeros.
+
+\paragraph{Unconstraining transform}
+The unconstraining transform $f : \Delta^{N} \to  \mathbb{R}^N$ is defined so that if $f(x) = y$, then
+\[
+y_n
+= \mathrm{logit}(z_n)
+  - \mbox{log}\left(\frac{1}{N + 1 - n} \right),
+\]
+where 
+\[ 
+ z_n = \frac{x_i}{1 - \sum_{i = 1}^{n-1} x_{i}}.
+\]
+
+\paragraph{Constraining inverse transform}
+The inverse transform follows the stick breaking construction, with $f^{-1} \colon \mathbb{R}^N \to \Delta^N$ defined by $f^{-1}(y) = x$, where
+\[
+x_n = z_n \left( 1 - \sum_{i=1}^{n-1} x_i \right), \\
+\]
+with
+\[
+z_n = \mathrm{logit}^{-1}\!\left(
+y_n  + \log \left( \frac{1}{N - n} \right)
+\right).
+\]
+                                            
+\paragraph{Change-of-variables adjustment} 
+The absolute determinant of the Jacobian of the inverse transform is
+\[
+\abs{J_{f^{-1}}} 
+= \prod_{n=1}^{N-1}
+   z_n \, (1 - z_n)
+   \left( 1 - \sum_{i=1}^{n-1} x_{i} \right).
+\]
+
+% \subsubsection{Additive log ratio transform}
+% The unconstraining transform for the identified softmax is known as
+% the additive log ratio (ALR) transform
+% \cite{aitchison1982statistical}, which is a bijection
+% $\textrm{alr}:\Delta^{N-1} \rightarrow \mathbb{R}^{N-1}$ defined for
+% $x \in \Delta^{N-1}$ by
+% \[
+%   \textrm{alr}(x)
+%   = \begin{bmatrix}\displaystyle
+%     \log \frac{x_1}{x_N}, \cdots , \log \frac{x_{N-1}}{x_N}
+%   \end{bmatrix}
+% \]
+% The inverse additive log ratio transform maps values in
+% $\mathbb{R}^{N-1}$ to $\Delta^{N-1}$ defined for $y \in
+% \mathbb{R}^{N-1}$ by
+% \[
+%   \textrm{alr}^{-1}(y)
+%   = \textrm{softmax}(\begin{bmatrix} y &  0 \end{bmatrix}),
+% \]
+% where for $u \in \mathbb{R}^N$,
+
+% \[
+%   \textrm{softmax}(u) = \frac{\exp(u)}{\sum \exp(u)}
+% \]
+
+% \[
+% \textrm{Here, } \abs{J} = \prod \exp(y)
+%   \, \left( \frac{1}{1 + \sum(\exp(y))} \right)^N
+% \]
+
+\subsubsection{Isometric Log Ratio Transform}
+
+We may define a distance preserving transformation from $\textrm{ilr}:\Delta^{N-1} \rightarrow \mathbb{R}^{N-1}$ called an isometric log ratio transform. By noting that the ALR transformation may be written as
+
+\[
+  \begin{aligned}
+ \textrm{alr}(x) &= \begin{bmatrix}\displaystyle
+    \log \frac{x_1}{x_N} \cdots \log \frac{x_{N-1}}{x_N}
+  \end{bmatrix} \\
+  &= \log(\mathbf{x}) \cdot \begin{bmatrix}\displaystyle
+                    1 & 0 & \cdots & 0 \\
+                    0 & 1 & \cdots & 0 \\
+                    \vdots & \vdots & \ddots & \vdots \\
+                    0 & 0 & \cdots & 1 \\
+                    -1 & -1 & \cdots & -1
+                    \end{bmatrix}.
+  \end{aligned}
+\]
+Take any unitary matrix $\mathbf{V} \in D \times D - 1$ then the ILR is defined for $x \in \Delta^{N-1}$ by
+\[
+  \textrm{ilr}(x)
+  = \log(\mathbf{x}) \cdot \mathbf{V}.
+\]
+
+Unitary $\mathbf{V}$ matrices may be constructed through the Gram-Schmidt process or by normalizing the rows of a Helmert contrast matrix using the L2 norm.
+
+The inverse isometric log ratio transform maps values in
+$\mathbb{R}^{N-1}$ to $\Delta^{N-1}$ defined for $y \in
+\mathbb{R}^{N-1}$ by
+\[
+  \textrm{ilr}^{-1}(y)
+  = \textrm{softmax}(\begin{bmatrix} \exp(\mathbf{V^{-1}} \mathbf{x} ) \end{bmatrix}),
+\]
+where for $u \in \mathbb{R}^N$,
+\[
+  \textrm{softmax}(u) = \frac{\exp(u)}{\textrm{sum}(\exp(u))}.
+\]
+
+The affine transformation of the multiplication by the inverse unitary matrix does not change
+the calculation of the change of variables adjustment proceeds similarly to the ALR case. In fact, any affine transformation may be completed at this stage which generalizes the ILR to power transformations as in \cite{tsagris2011data}\footnote{
+   Let $\alpha$ be the scalar power transformation parameter in $\mathbb{R}$ then the inverse \textit{power} based transformation is given by $(V^{-1} \mathbf{x} \alpha + 1) / \alpha$. See \cite{tsagris2011data} for more information.
+}. 
+
+Given a density $p_X(x)$ defined over simplices $x \in \Delta^{N-1}$,
+we can transform to a density over unconstrained parameters $y \in
+\mathbb{R}^{N-1}$ by applying the inverse ILR transform and adjusting
+for the change of variables, which yields
+\[
+  p_Y(y) = p_X(\textrm{ilr}^{-1}(y)) \absdet{J_{s}(y)},
+\]
+where $J_{s}(y)$ is the Jacobian of the function $s$ evaluated at $y$
+and $\absdet{J_s(y)}$ is the absolute value of its determinant.
+
+\subsubsection{Augmented-Softmax Transform}
 %TODO:  Needs to be written like other transforms -> transform, inverse, |J|
-We define the transformation
-$\phi: \mathbb{R}^n \to \Delta^{N} \times \mathbb{R}_{>0}: y \mapsto
-(x_-, r)$, where  $\Delta_{-}^N$ and $x_{-}$  denote $N$ elements of the simplex and $x$, respectively. Here $r = \sum_{i=1}^n \textrm{exp}(y_i)$,
-$x_i = \frac{1}{r} \textrm{exp}(y_i)$ for $i \in [1, N-1]$ and $\delta_{ij}$ is the Kronecker delta function. If $\mathrm{diag}(x)_{i, j} = \delta_{ij} x_i$ and $\boldsymbol{1}_n$ is the $N$-vector of ones.\[
-  J = (I_{N-1} - x_- \boldsymbol{1}_{N-1}^\top) \operatorname{diag}(x_-),
+We define the constraining transformation
+$f: \mathbb{R}^N \to \Delta^{N} \times \mathbb{R}_{>0}: y \mapsto
+(x_-, r)$, where and $x_{-} \in \Delta_{-}^N$. Here $r = \sum_{i=1}^N \textrm{exp}(y_i) > 0$,
+$x_i = \frac{1}{r} \textrm{exp}(y_i)$ for $i \in [1, N-1]$ and $\delta_{ij}$ is the Kronecker delta function. If $\mathrm{diag}(x)_{i, j} = \delta_{ij} x_i$ and $\boldsymbol{1}_n$ is the $N$-vector of ones, then
+\[
+  J_f = (I_{N-1} - x_- \boldsymbol{1}_{N-1}^\top) \operatorname{diag}(x_-),
 \] 
 
 Using Sylvester's determinant theorem,
 $|I_{N-1} - x_- \boldsymbol{1}_{N-1}^\top| = 1 -
 \boldsymbol{1}_{N-1}^\top x_- = 1 - \sum_{i=1}^{N-1} x_i = x_N$, so
-$$ |J| = x_n \prod_{i=1}^{N-1} x_i = \prod_{i=1}^{N} x_i = \exp\left(\sum_{i=1}^{N-1} y_i\right) \left(1 + \sum_{i=1}^{N-1} e^{y_i}\right)^{-N}$$
+$$ |J_f| = x_n \prod_{i=1}^{N-1} x_i = \prod_{i=1}^{N} x_i = \exp\left(\sum_{i=1}^{N-1} y_i\right) \left(1 + \sum_{i=1}^{N-1} \exp(y_i)\right)^{-N}$$
+
+\subsubsection{Hyperspherical coordinate transforms}
+
+Let $u$ be a unit vector with $N+1$ elements in the positive orthant of the unit sphere $\mathbb{S}_{>0}^N$, which has the constraints $\sum_{i=1}^{N+1} u_i^2 = 1$ and $u_i > 0$.
+There is a unique bijective map $f_1\colon \mathbb{S}_{>0}^N \to \Delta^N \colon u \mapsto x$ given by $x_i = u_i^2$.
+We then define $f_2$ as the map from hyperspherical coordinates to Cartesian coordinates of the hypersphere.
+Taking $z_i = \sin^2(\phi_i) \in (0, 1]$ for $\phi_i \in (0, \frac{\pi}{2}]$, the composed map $f_1 \circ f_2$ is written
+
+\[
+  x_i = (1 - z_i (1 - \delta_{i,N+1})) \prod_{k=1}^{i-1} z_k.
+\]
+
+The inverse of this transform is
+$$z_i = 1 - \frac{x_i}{1 - \sum_{k=1}^{i - 1} x_k}.$$
+
+To complete the transform $f = f_1 \circ f_2 \circ f_3$, we must select a constraining transform $f_3: y \mapsto \phi$.
+We consider 3 different approaches.
+
+\subsubsection{Hyperspherical angular transform}
+
+Here we use a (scaled) logistic function to map directly from the unconstrained space to the constrained angle:
+$$\sin^{-1}(\sqrt{z_i}) = \phi_i = \frac{\pi}{2} \operatorname{logit}^{-1} (y_i).$$
+
+In terms of $\phi$,
+
+$$
+|J_f| = 2^N \prod_{i=1}^N \phi_i \left(1 - \frac{2}{\pi} \phi_i\right) \sin^{2(N-i)+1}(\phi_i) \cos(\phi_i).
+$$
+This transform was discussed in \cite{betancourt2012cruising}.
+
+\subsubsection{Hyperspherical logit transform}
+
+If we define $f_3$ to map from the unconstrained space directly to a conveniently-chosen power of $z_i$ function using the logistic function 
+$$z_i^{N-i+1} = \operatorname{logit}^{-1} (y_i),$$
+then the Jacobian determinant is
+$$
+|J_f| = \frac{1}{N!} \prod_{i=1}^N \operatorname{logit}^{-1}(y_i) (1 - \operatorname{logit}^{-1}(y_i)).
+$$
+If $x$ is uniformly distributed on the unit simplex, then $y_i$ is logistic-distributed with mean 0 and variance $\frac{\pi^2}{3}$.
+
+\subsubsection{Hyperspherical probit transform}
+
+Similarly, if we use the inverse probit function instead of the inverse logit, then $f_3$ is
+$$z_i^{N-i+1} = \operatorname{probit}^{-1} (y_i),$$
+where $\operatorname{probit}^{-1}(\cdot)$ is the cumulative distribution function of the standard normal distribution.
+The resulting Jacobian determinant is
+\[
+|J_f| = \frac{1}{N!} \prod_{i=1}^N \mathcal{N}(y_i),
+\]
+where $\mathcal{N}(\cdot)$ is the density function of the standard normal distribution.
+As a result, if $x$ is uniformly distributed on the unit simplex, then $y_i$ is standard normally distributed.
 
 %TODO: better captions
 \section{Results}
 
 \begin{table}[!ht]
     \centering
-    \begin{tabular}{|l|l|l|l|l|}
+    \begin{tabular}{r|r|r|r|r|r|}
     \hline
-        ~ & stan & softmax-augmented & softmax & stickbreaking \\ \hline
-        $\alpha = 0.1, \, N = 10$ & 6.908s & 11.712s & 10.548s & 13.386s \\ 
-        $\alpha = 0.1, \, N = 100$ & 74.274s & 33.757s & 61.826s & 159.016s \\ 
-        $\alpha = 0.1, \, N = 1000$ & 1108.48s & 307.463s & 657.791s & 11773.4s \\ 
-        $\alpha = 1, \, N = 10$ & 4.072s & 6.328s & 5.337s & 5.67s \\ 
-        $\alpha = 1, \, N = 100$ & 20.805s & 27.151s & 25.94s & 51.45s \\ 
-        $\alpha = 1, \, N = 1000$ & 306.942s & 171.824s & 184.126 & 3023.24 \\ 
-        $\alpha = 10, \, N = 10$ & 4.123s & 6.375s & 5.563s & 5.606s \\ 
-        $\alpha = 10, \, N = 100$ & 23.6s & 29.091s & 30.747s & 48.834s \\ 
-        $\alpha = 10, \, N = 1000$ & 205s.627 & 161.11s & 150.751s & 1866.83s \\ \hline
+        $\alpha$ & $N$ & Stan & Augmented-Softmax & softmax & stickbreaking \\ \hline
+        0.1 & 10  & 6.9s & 11.712s & 10.548s & 13.386s \\ 
+        0.1 & 100 & 74.274s & 33.757s & 61.826s & 159.016s \\ 
+        0.1 & 1000 & 1108.48s & 307.463s & 657.791s & 11773.4s \\ 
+        1 & 10 & 4.072s & 6.328s & 5.337s & 5.67s \\ 
+        1 & 100 & 20.805s & 27.151s & 25.94s & 51.45s \\ 
+        1, & 1000 & 306.942s & 171.824s & 184.126 & 3023.24 \\ 
+        10 & 10 & 4.123s & 6.375s & 5.563s & 5.606s \\ 
+        10 & 100 & 23.6s & 29.091s & 30.747s & 48.834s \\ 
+        10 & 1000 & 205s.627 & 161.11s & 150.751s & 1866.83s \\ \hline
+    \end{tabular}
+\end{table}
+
+\begin{table}[!ht]
+    \centering
+    \begin{tabular}{c|r||r|r|r|r|}
+        $\alpha$ & $N$ & stan & aug-softmax & softmax & stick-break \\ \hline 
+        0.1 & 10  & 7s & 11s & 11s & 13s \\ 
+        0.1 & 100 & 74s & 34s & 62s & 160s \\ 
+        0.1 & 1000 & 1100s & 300s & 660s & 12000s \\ 
+        1 & 10 & 4s & 6s & 5s & 6s \\ 
+        1 & 100 & 21s & 27s & 26s & 51s \\ 
+        1 & 1000 & 300s & 170s & 180s & 3000s \\ 
+        10 & 10 & 4s & 6s & 6s & 5s \\ 
+        10 & 100 & 24s & 29s & 31s & 49s \\ 
+        10 & 1000 & 200s & 160s & 150s & 1900s \\
     \end{tabular}
 \end{table}
 
 \begin{figure}[t!]
     \centering
     \includegraphics[width=1.2\textwidth]{figures/simplex/ess_density.png}
-    \caption{Probability Density plot of Effective Sample Size/Total LeapFrog Steps. Effective sample size is evaluated at 100 runs, each point is the value of ESS/Total Leapfrog steps taken by the sampler in one run.}
+    \caption{Probability Density Plot of Effective Sample Size/Total Leapfrog Steps. Effective sample size is evaluated at 100 runs, and each point is the value of ESS/Total Leapfrog steps taken by the sampler in one run.}
     \label{fig:ess_density}
 \end{figure}
 
 \begin{figure}[t!]
     \centering
     \includegraphics[width=1.2\textwidth]{figures/simplex/ess_cdf.png}
-    \caption{Cumulative Density plot of Effective Sample Size/Total LeapFrog Steps. Effective sample size is evaluated at 100 runs, each point is the value of ESS/Total Leapfrog steps taken by the sampler in one run.}
+    \caption{Cumulative Density Plot of Effective Sample Size/Total Leapfrog Steps. Effective sample size is evaluated at 100 runs, each point is the value of ESS/Total Leapfrog steps taken by the sampler in one run.}
     \label{fig:ess_cdf}
 \end{figure}
 
@@ -240,7 +451,7 @@ $$ |J| = x_n \prod_{i=1}^{N-1} x_i = \prod_{i=1}^{N} x_i = \exp\left(\sum_{i=1}^
 
 We would like to thank \url{matrixcalculus.org} for providing an
 easy-to-use symbolic matrix derivative calculator.
-
+This work was funded by the Deutsche Forschungsgemeinschaft (DFG, German Research Foundation) under Germany’s Excellence Strategy – EXC number 2064/1 – Project number 390727645.
 
 
 \bibliography{all}{}

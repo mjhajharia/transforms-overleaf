@@ -95,5 +95,155 @@ and our final expression for densities for unconstrained $y \in
   = p_X(\textrm{alr}^{-1}(y))
   \, \textrm{prod}(\exp(y))
   \left( \frac{1}{1 + \textrm{sum}(\exp(y))} \right)^N
-\]  
+\]
+
+\subsection{Hyperspherical simplex transforms}
+
+\subsubsection{Hyperspherical coordinate transform}
+
+We use the following definition of hyperspherical coordinates.
+For $\phi_i \in (0, \pi/2]$ and $u \in \mathbb{S}^N_{>0}$, the positive orthant of the $N$-sphere,
+\[
+  u_i = \left(\prod_{k=1}^{i-1} \sin(\phi_k)\right) \begin{cases}
+    1 & \text{ if } i = N + 1\\
+    \cos(\phi_i) & \text{otherwise}
+  \end{cases}.
+\]
+
+Let $z_i = \sin^2(\phi_i)$ and $x_i = u_i^2$, so that $x \in \Delta^N$.
+Then
+\[
+  x_i = \left(\prod_{k=1}^{i-1} z_k\right) \left(\begin{cases}
+    1 & \text{ if } i = N + 1\\
+    (1 - z_i) & \text{otherwise}
+  \end{cases}\right) = (1 - z_i (1 - \delta_{i,N+1})) \prod_{k=1}^{i-1} z_k.
+\]
+
+\subsubsection{Hyperspherical coordinates inverse transform}
+
+To derive the inverse transform, note that
+\[
+    \begin{aligned}
+        x_{N+1} &= \prod_{k=1}^{N} z_k\\
+        x_N + x_{N+1} &= (1 - z_N)\left(\prod_{k=1}^{N-1} z_k\right) + z_N \left( \prod_{k=1}^{N-1} z_k \right) = \prod_{k=1}^{N-1} z_k = \frac{x_N}{1 - z_N}\\
+        x_{N-1} + x_{N} + x_{N+1} &= (1-z_{N-1}) \left(\prod_{k=1}^{N-2} z_k\right) + z_{N-1} \left(\prod_{k=1}^{N-2} z_k\right) = \prod_{k=1}^{N-2} z_k = \frac{x_{N-1}}{1 - z_{N-1}}\\
+        &\vdots \\
+        \sum_{k=i}^{N+1} x_{k} &= \prod_{k=1}^{i - 1} z_k = \frac{x_i}{1 - z_i}.
+    \end{aligned}
+\]
+
+From the final expression, we can define the inverse transform:
+\[
+z_i = 1 - \frac{x_i}{\sum_{k=i}^{N+1} x_k}
+\]
+
+\subsubsection{Jacobian of hyperspherical coordinates transform}
+
+To derive the Jacobian, we note that $x_i$ depends only on $z_k$ for $k \le i$.
+As a result, the Jacobian of the map from $z$ to $x_-$ is lower triangular, and its determinant depends only on its diagonal, which consists of the terms
+$$J_{ii} = -\frac{\partial x_i}{\partial z_i} = \prod_{k=1}^{i-1} z_k,$$
+so
+$$
+|J| = \prod_{i=1}^N |J_{ii}|
+= \prod_{i=1}^N \prod_{k=1}^{i-1} z_k
+= \prod_{k=1}^{N-1} \prod_{i=k+1}^N z_k
+= \prod_{i=1}^{N-1} z_i^{N-i} = \prod_{i=1}^N z_i^{N-i}
+$$
+
+Due to the form of the Jacobian correction, if $x$ is uniformly distributed on the unit simplex, then $z_i$ and $z_j$ are uncorrelated for all $i \ne j$.
+
+\subsubsection{Hyperspherical angular transform}
+
+The map from $y$ to $z$ is elementwise, so its Jacobian is diagonal.
+Each element is
+$$\sin^{-1}(\sqrt{z_i}) = \phi_i = \frac{\pi}{2} \operatorname{logit}^{-1} (y_i).$$
+Differentiating all sides with respect to $y_i$, we find
+$$
+\begin{aligned}
+\frac{1}{\sqrt{1 - z_i^2}} \frac{1}{2 \sqrt{z_i}} \frac{\partial z_i}{\partial y_i} &= \frac{\pi}{2} \operatorname{logit}^{-1} (y_i) (1 - \operatorname{logit}^{-1} (y_i)) = \phi_i \left(1 - \frac{2}{\pi} \phi_i\right)\\
+\frac{\partial z_i}{\partial y_i} &= 2 \phi_i \left(1 - \frac{2}{\pi} \phi_i\right) \sin(\phi_i) \cos(\phi_i).
+\end{aligned}
+$$
+
+As a result, the combined transform $f: y \mapsto x$ is
+\[
+  x_i = \left(1 - \cos^2\left(\frac{\pi}{2} \operatorname{logit}^{-1} (y_i)\right) (1 - \delta_{i,N+1})\right)\left(\prod_{k=1}^{i-1} \sin^2\left(\frac{\pi}{2} \operatorname{logit}^{-1} (y_k)\right)\right),
+\]
+and its inverse is
+\[
+z_i = \operatorname{logit}\left(\frac{2}{\pi}\sin^{-1}\left(\sqrt{1 - \frac{x_i}{\sum_{k=i}^{N+1} x_k}}\right)\right).
+\]
+
+The Jacobian determinant is
+$$
+\begin{aligned}
+    |J_f| &= \prod_{i=1}^N z_i^{N-i} 2 \phi_i \left(1 - \frac{2}{\pi} \phi_i\right) \sin(\phi_i) \cos(\phi_i)\\
+          &= 2^N \prod_{i=1}^N \phi_i \left(1 - \frac{2}{\pi} \phi_i\right) \sin^{2(N-i)+1}(\phi_i) \cos(\phi_i).
+\end{aligned}
+$$
+
+\subsubsection{Hyperspherical logit transform}
+
+For $z_i \in (0, 1]$, $z_i^k \in (0, 1]$ is bijective for $k \ne 0$.
+Let $g(w)$ be the density function for a distribution on $\mathbb{R}$ and $G(w)$ be its cumulative distribution function.
+By the definition of the CDF, $\frac{\mathrm{d}}{\mathrm{d}w} G(w) = g(w)$.
+Let $z_i^{N-i+1} = G(y_i)$.
+
+The combined transform $f: y \mapsto x$ is then
+\[
+  x_i = \left(1-G(y_i)^{1/(N-i+1)}(1 - \delta_{i,N+1})\right)\left(\prod_{k=1}^{i-1} G(y_k)^{1/(N-k+1)}\right),
+\]
+and its inverse is 
+\[
+y_i = G^{-1}\left(\left(1 - \frac{x_i}{\sum_{k=i}^{N+1} x_k}\right)^{N-i+1}\right).
+\]
+
+Then
+$$
+\begin{aligned}
+(N-i+1) z_i^{N-i} \frac{\partial z_i}{\partial y_i} &= g(y_i)\\
+\frac{\partial z_i}{\partial y_i} &= \frac{g(y_i)}{(N-i+1) z_i}.
+\end{aligned}
+$$
+
+As a result,
+$$
+\begin{aligned}
+|J_f| &= \prod_{i=1}^{N} z_i^{N-i} \frac{g(y_i)}{(N-i+1) z_i^{N-i}}\\ 
+&= \left(\prod_{i=1}^N \frac{1}{N-i+1} \right) \prod_{i=1}^{N} g(y_i)\\
+&= \frac{1}{N!} \prod_{i=1}^{N} g(y_i).
+\end{aligned}
+$$
+
+This particular transform allows us to transform the uniform distribution on the simplex to any distribution on $\mathbb{R}^N$ whose coordinates are IID distributed according to $g$.
+
+If we select $G$ to be the logistic function, then $g(w) = \operatorname{logit}^{-1}(w) (1 - \operatorname{logit}^{-1}(w))$ is the density of the logistic distribution with mean $0$ and scale term $1$, and $y_i$ is logistically distributed.
+This choice of $G$ defines the hyperspherical logit transform.
+
+\subsubsection{Hyperspherical probit transform}
+
+Similarly, to define the hyperspherical probit transform, we select $G$ to be the inverse probit function.
+Then $g$ is the density function of the standard normal distribution.
+
+\subsubsection{Transforming the Dirichlet distribution}
+
+Recall that the Dirichlet distribution has density $p_X(x)$ equal to
+\[
+p_X(x) \propto \prod_{i=1}^{N+1} x_i^{\alpha_i - 1}.
+\]
+
+Note that
+\[
+\begin{aligned}
+\prod_{i=1}^{N+1} x_i^{\alpha_i - 1} &= \prod_{i=1}^{N+1} \left(\left(1-G(y_i)^{1/(N-i+1)}(1 - \delta_{i,N+1})\right)\left(\prod_{k=1}^{i-1} G(y_k)^{1/(N-k+1)}\right)\right)^{\alpha_i - 1}\\
+&= \left(\prod_{i=1}^{N} \left(1-G(y_i)^{1/(N-i+1)}\right)^{\alpha_i - 1}\right) \prod_{i=1}^{N+1}\prod_{k=1}^{i-1} G(y_k)^{(\alpha_i - 1)/(N-k+1)}\\
+&= \prod_{i=1}^{N} \left(1-G(y_i)^{1/(N-i+1)}\right)^{\alpha_i - 1} G(y_i)^{-1+\sum_{k=i+1}^{N+1}\alpha_k/(N-i+1)}\\
+\end{aligned}
+\]
+The transformed density on $y$ is then
+\[
+p_Y(y) \propto \prod_{i=1}^{N} \left(1-G(y_i)^{1/(N-i+1)}\right)^{\alpha_i - 1} G(y_i)^{-1+\sum_{k=i+1}^{N+1}\alpha_k/(N-i+1)} g(y_i) = \prod_{i=1}^{N} h(y_i, \alpha_{i:N+1}),
+\]
+where $h$ is a density function.
+Therefore, regardless of the choice of $g$ or $\alpha$, the individual coordinates of the transformed distribution are independently distributed.
 \end{appendices}
