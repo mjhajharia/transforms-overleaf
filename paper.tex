@@ -51,76 +51,51 @@
 
 \begin{abstract}
   \noindent
-  This paper evaluates the statistical and computational
-  efficiency of unconstraining parameter transforms for Hamiltonian
-  Monte Carlo sampling.
-\end{abstract}
+  We consider the task of sampling on a unit $N$ - Simplex using Hamiltonian Monte Carlo. In bayesian computation, parameters are often constrained on a simplex, e.g. for modelling categorical data. Unconstraining transforms mapping a unit $N$ - Simplex to $R^N$ are used to avoid the challenges of constructing HMC samplers for a constrained space. Arbitrary transformations can serve as this mapping, not all of them work well when sampled from - owing to weak convexity, incompatible posterior geometry, numerical instability among other reasons. In this paper we evaluate the statistical properties,  computational efficiency and geometry for unconstraining transforms between a unit $N$ - simplex and $R^N$.
+  
+  \end{abstract}
 
 \section{Introduction}
 
-In statistical computing, we often need to compute high-dimensional
-integrals over densities $\pi(x)$ (e.g., Bayesian estimation or
-prediction, $p$-value calculations, etc.).  The only black-box
-techniques that work for general high-dimensional integrals are
-Markov chain Monte Carlo (MCMC) methods.  The most effective MCMC
-method in high dimensions is Hamiltonian Monte Carlo (HMC) \cite{neal2011mcmc}.
-HMC works by simulating the Hamiltonian dynamics of a fictitious particle
-representing the value being sampled coupled with a momentum term.
+In statistical computing, we often need to compute high-dimensional integrals over densities $\pi(x)$ (e.g., Bayesian estimation or prediction, $p$-value calculations, etc.).  The only black-box techniques that work for general high-dimensional integrals are Markov chain Monte Carlo (MCMC) methods.  The most effective MCMC method in high dimensions is Hamiltonian Monte Carlo (HMC) \cite{neal2011mcmc}. HMC works by simulating the Hamiltonian dynamics of a fictitious particle representing the value being sampled coupled with a momentum term. 
 
-Although it is possible to write HMC samplers that work for simply
-constrained values such as upper- and/or lower-bounds
-\cite{neal2011mcmc} or unit vectors \cite{byrne2013geodesic}, it is
-much more challenging to do the same for complex constraints such as
-simplexes or positive definite matrices or for densities involving
-multiple constrained values.  Instead, it is far more common to map
-the constrained values to unconstrained values before sampling
-\cite{JSSv076i01, radul2021base, fjelde2020bijectors}.  
+Although it is possible to construct HMC samplers that work for simple constraints such as upper- and/or lower-bounds \cite{neal2011mcmc} or unit vectors \cite{byrne2013geodesic}, it is much more challenging to do the same for complex constraints such as simplexes, positive definite matrices or for densities involving multiple constrained values.  Instead, it is far more common to map the constrained values to unconstrained values before sampling \cite{JSSv076i01, radul2021base, fjelde2020bijectors}.
 
-Our goal in this paper is to evaluate both standard and less well known transforms for constrained data types in regular use in statistical modeling.  We will evaluate transforms in the head, body, and tail of distributions in terms of computational efficiency of the transform, its Jacobian determinant and associated gradients, the geometry induced in the unconstrained space (e.g., log convexity and conditioning), as well as HMC sampling efficiency. 
+This approach is not without ramifications, posterior geometry obtained from a transformed variable can be very different from the original. In context of Hamiltonian Monte Carlo, there is a lack of formal analysis or comparison for these transformations.  We evaluate both standard and relatively unvisited transforms for constrained data types that find regular use in statistical modeling. Evaluation takes into account specificities such as head, body, and tail of distributions in terms of computational efficiency of the transform, its Jacobian determinant and associated gradients, the geometry induced in the unconstrained space (e.g., log convexity and conditioning), as well as HMC sampling efficiency.
 
-We consider transforms for several constrained data types, including scalars with lower- and/or upper-bounds; vectors with simplex, sum-to-zero, or unit length constraints; and matrices (or their Cholesky factors) constrained to be positive definite (e.g., covariance matrices), positive definite with unit diagonal (e.g., correlation matrices), or orthonormal.  
-
+In this paper, we focus on transforms on a unit $N$-simplex. Simplexes are useful for representations of multinomial probabilities - points on the standard $N$-simplex in $R^{N+1}$ are the space of possible parameters (probabilities) of the categorical distribution on $n+1$ possible outcomes. Lastly, we define Aitchison Geometry and compare metric distortions of canonical transforms (or their augmented forms) in Compositional Data Analysis.
 \section{Constraining transforms}
 
-In this paper, we restrict our attention to a general class of surjective constraining transforms $f : \mathcal{Y} \rightarrow \mathcal{X}$ from an unconstrained space $\mathcal{Y}$ onto a constrained space $\mathcal{X}$.  For all of our transforms, we have $\mathcal{Y} = \mathbb{R}^M$ and $\mathcal{X} \subset \mathbb{R}^N$.  Along with each transform, we have an additional (perhaps improper) density function $h(y)$ defined over $y \in \mathcal{Y}$ such that if $y \sim h(\cdot)$, then $f(y) \sim \textrm{uniform}(\cdot \mid \mathcal{X})$.  
-
-The above definition is informal in that it is not possible to sample over an improper density.  Instead, we can characterize our end-to-end goal, which is that if we have a proper density $p_X(x)$ defined for $x \in \mathcal{X}$, then we want the induced distribution on $y$, namely, the one with the density function
-$$
-p_Y(y) = h(y) \, p_X(f(y)),
-$$
-to be proper and be such that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
+A surjective constraining transform $f : \mathcal{Y} \rightarrow \mathcal{X}$ is mapped from an unconstrained space $\mathcal{Y} = \mathbb{R}^M$ onto a constrained space $\mathcal{X} \subset \mathbb{R}^N$, and $h(y)$ is a proper density defined over $y \in \mathcal{Y}$ such that if $y \sim h(\cdot)$, then $f(y) \sim \textrm{uniform}(\cdot \mid \mathcal{X})$.  It is not possible to sample over an improper density.  To this end, we stipulate the induced distribution on $y$ to be proper, given a proper density $p_X(x)$ defined for $x \in \mathcal{X}$ such that if $y \sim p_Y(\cdot)$ then $f(y) \sim p_X(\cdot)$ . In this case, density of the distribution induced on $y$ is 
+\[
+p_Y(y) = h(y) \, p_X(f(y))
+\]
 
 \subsection{Bijective constraining transforms}
 
-The conventional way to define constraining transforms is through the change-of-variables formula.  Suppose we have a distribution $p_X(x)$ on constrained values $x \in \mathcal{X}$ and we have a smooth and bijective unconstraining transform $g : \mathcal{X} \rightarrow \mathcal{Y}$.  We then define our constraining transform $f : \mathcal{Y} \rightarrow \mathcal{X}$ as the inverse of $g$, $f = g^{-1}$.  The induced density on $\mathcal{Y}$ is adjusted by a factor of the absolute value of the determinant of the Jacobian of the constraining transform,
-\[
-h(y) = \absdet{J_f(y)}.
+ Suppose, we have a distribution $p_X(x)$ on constrained values $x \in \mathcal{X}$. A smooth, bijective unconstraining transform is defined as $g : \mathcal{X} \rightarrow \mathcal{Y}$, and $g^{-1}$ is the constraining transform $f : \mathcal{Y} \rightarrow \mathcal{X}$.  Using the standard change of variables, the induced density on $\mathcal{Y}$ is adjusted by a constant factor 
+ 
+ \[\absdet{J_f(y)} = \absdet{\nabla_y \, f(y)}.
+ \]
+Thereby, for any given $p_X(x)$, 
+ 
+ \[
+ y \sim p_Y(\cdot) \implies f(y) \sim p_X(\cdot) \, \, \text{where} \, \, p_Y(y) = p_X(f(y)) \, \absdet{J_f(y)}
 \]
-That way, for any given $p_X(x)$, we have
-\[
-p_Y(y) = p_X(f(y)) \, \absdet{J_f(y)},
-\]
-where the Jacobian of the inverse transform is defined by
-\[
-  J_{f^{-1}}(y) \ = \ \nabla_y \, f^{-1}(y) \ = \ \frac{\partial}{\partial y} \, f^{-1}(y).
-\]
-With this standard change of variables adjustment, we are guaranteed that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
+
 
 \subsection{Surjective constraining transforms}
 
-Not all of our transforms are smooth, bijective changes of variables as described in the previous subsection.  In some cases, we will take the dimensionality of the unconstrained space $\mathcal{Y}$ to be higher than that of the constrained space $\mathcal{X}$ and thus need additional constraints to ensure the correct distributions on $\mathcal{X}$.
-In each of these cases, we seek to construct an expanded parameter space $\mathcal{Z} = \mathcal{X} \times \mathcal{R}$ with parameters $z = (x, r)$ for newly introduced constrained parameters $r \in \mathcal{R}$.
-$\mathcal{R}$ is chosen so that the new constrained space $\mathcal{Z}$ has the same dimensionality as $\mathcal{Y}$.
-Then, we choose a prior $p_R(r | x)$ so that
+
+For a constraining transform $f: R^\mathcal{M} \rightarrow R^\mathcal{N}$, if $\mathcal{M} >  \mathcal{N}$, additional constraints are needed to ensure the correct distributions on $\mathcal{X}$. Bijective change-of-variables method cannot be applied here, instead an expanded parameter space $\mathcal{Z} = \mathcal{X} \times \mathcal{R}$ is constructed with parameters $z = (x, r)$. Here, $r \in \mathcal{R}$ is introduced such that $\mathcal{Y}$ and $\mathcal{Z}$ have the same dimensionality. Taking prior $p_R(r | x)$,
 \[
 p_Y(y) = h(y) p_Z(z) = h(y) p_X(x) p_R(r | x).
 \]
-We then choose a bijective transform $\tilde{g}: \mathcal{Z} \to \mathcal{Y}$ and its inverse $\tilde{f}$, where $\tilde{f}(y)_1 = f(y)$, that allows us to apply the usual bijective change-of-variables approach:
+We define a bijective transform $\tilde{g}: \mathcal{Z} \to \mathcal{Y}$ and its inverse $\tilde{f}$, where $\tilde{f}(y)_1 = f(y)$, this permits obtaining change-of-variables,
 \[
-h(y) = |J_{\tilde{f}}(y)|
+h(y) = |J_{\tilde{f}}(y)|.
 \]
-Discarding $r$ after sampling is equivalent to marginalizing it out, and in practice, $r$ may never be directly computed.
-It is convenient to choose $p_R(r | x) = p_R(r)$, and we do so in this paper. 
+Discarding $r$ after sampling is equivalent to marginalizing it out, and in practice, $r$ may never be directly computed. On acount of convenience,  we choose $p_R(r | x) = p_R(r)$ in the rest of the paper.
 
 % In all of these cases, we will have a $p_Y(y)$ defined as a product of the change-of-variables adjustment for the transform coupled with a standard normal distribution over $\mathcal{Y}$,
 % \[
@@ -129,17 +104,13 @@ It is convenient to choose $p_R(r | x) = p_R(r)$, and we do so in this paper.
 % where $\textrm{I}$ is the identity matrix.
 % For each case, we have to ensure that $p_Y(y) = h(y) \, p_X(f(y))$ is such that if $y \sim p_Y(\cdot)$, then $f(y) \sim p_X(\cdot)$.
 
-\section{Vector transforms}
+\section{Unit simplex}
 
-In this section, we consider transforms from unconstrained space to constrained vectors, including unit-simplex, sum-to-zero, and unit-length constraints.
-
-\subsection{Unit simplex}
-
-Simplexes are useful for representations of multinomial probabilities - points on the standard $N$-simplex in $R^{N+1}$ are the space of possible parameters (probabilities) of the categorical distribution on $n+1$ possible outcomes. The set of unit simplexes of dimension $N$ is
+The set of unit simplexes of dimension $N$ is
 \[
-  \Delta^N = \setcomp{x \in \mathbb{R}^{N + 1}}{x_n \geq 0 \textrm{ for } 1 \leq n \leq N+1 \textrm{ and } \sum_{n=1}^{N + 1} x_n = 1}
+  \Delta^N = \setcomp{x \in \mathbb{R}^{N + 1}}{\sum_{i=1}^{N + 1} x_i = 1,\,x_i \ge 0 \, \, \forall i }
 \]
-Geometrically, $\Delta^N$ is the convex closure of $N+1$ ``one hot'' points that take value one in one coordinate and zero elsewhere.  For example, $\Delta^2$ is the convex closure of the three vectors
+An affine transformation $(x_0, \ldots, x_n) \mapsto \sum_{i=0}^n x_i v_i \,$ maps a unit $N$-simplex to an arbitrary $N$-simplex. Geometrically, $\Delta^N$ is the convex hull of $N+1$ standard unit vectors comprising the vertices.  For example, $\Delta^2$ is the convex closure of the three vectors
 $\begin{bmatrix}1 & 0 & 0 \end{bmatrix},
 \begin{bmatrix} 0 & 1 & 0 \end{bmatrix}$,
 and $\begin{bmatrix} 0 & 0 & 1 \end{bmatrix}$. As such, there are only $N$ degrees of
@@ -147,7 +118,8 @@ freedom, because if $x$ is an $N$-simplex, then
 \[
   x_{N+1} = 1 - (x_1 + x_2 + \cdots + x_N).
 \]
-We introduce the notation $\Delta^N_-$ to denote the first $N$ elements of a simplex, i.e., a sequence of non-negative integers that sum to less than or equal to one.
+We introduce the notation $\Delta^N_-$ to denote the probability simplex, which is a face of the unit simplex (each face of an $N$ - simplex is an affine $N-1$ - simplex),
+
 \[
 \Delta^N_-
 = 
