@@ -1,4 +1,79 @@
 \begin{appendices}
+\section{Aitchison Geometry}
+\textbf{Note for coauthors: These are taken from notes on Aitchison Geometry, more trimming and rewriting needs to happen to make them relevant + citing. Also, here $\mathcal{S}^N$ is the probability simplex $\Delta^{N}$ which is equivalent to the face of a unit simplex $\Delta^{N}$.\\}
+
+A vector $\mathbf{x}=\left[x_1, x_2, \ldots, x_N\right]$ is a composition if $x_i \in \mathbb{R}_{+}^N$ and each $x_i$ represents relative information here. For any vector of $N$ real positive components, the closure of $\mathbf{x}$ is defined as
+$$
+\mathcal{C}(\mathbf{x})=\left[\frac{\kappa \cdot z_1}{\sum_{i=1}^N z_i}, \frac{\kappa \cdot z_2}{\sum_{i=1}^N z_i}, \cdots, \frac{\kappa \cdot z_N}{\sum_{i=1}^N z_i}\right] .
+$$
+The result is the same vector re-scaled so that the sum of its components is $\kappa$.\\
+
+
+\textbf{General principles}
+
+\begin{itemize}
+	\item Scale Invariance: Two compositions $\mathbf{x}, \mathbf{y}$ are equivalent if there exists a positive scalar $\lambda \in \mathbb{R}^{+}$such that $\mathbf{x}=\lambda \cdot \mathbf{y}$ and, equivalently, $\mathcal{C}(\mathbf{x})=\mathcal{C}(\mathbf{y})$. For a scale invariant function $f(.)$ and a positive scalar $\lambda$, we notice $f(\lambda \mathbf{x})=$ $f(\mathbf{x})$.  Common choices of such functions are log-ratios of the parts in $\mathbf{x}$. The ratio $f(\mathbf{x})=x_1 / x_2=\left(\lambda \cdot x_1\right) /\left(\lambda \cdot x_2\right)$ is scale invariant.
+	\item A function is permutation-invariant if it yields equivalent results when the ordering of the parts in the composition is changed. 
+	\item Subcompositional coherence: Composition results obtained for a subset of parts of a composition (a subcomposition) should remain the same as in a composition
+
+\end{itemize}
+Perturbation of a composition $\mathbf{x} \in \mathcal{S}^N$ by a composition $\mathbf{y} \in$ $\mathcal{S}^N$
+$$
+\mathbf{x} \oplus \mathbf{y}=\mathcal{C}\left[x_1 y_1, x_2 y_2, \ldots, x_N y_N\right]
+$$
+Power transformation or powering of a composition $\mathbf{x} \in \mathcal{S}^N$ by a constant $\alpha \in \mathbb{R}$,
+$$
+\alpha \odot \mathbf{x}=\mathcal{C}\left[x_1^\alpha, x_2^\alpha, \ldots, x_N^\alpha\right] .
+$$
+The simplex,$\left(\mathcal{S}^N, \oplus, \odot\right)$, with perturbation and powering, is a vector space. This means the following properties hold, making them analogous to translation and scalar multiplication:
+$\left(\mathcal{S}^N, \oplus\right)$ has a commutative group structure
+Powering satisfies the properties of an external product.
+
+Inner product of $\mathbf{x}, \mathbf{y} \in \mathcal{S}^N$,
+$$
+\langle\mathbf{x}, \mathbf{y}\rangle_a=\frac{1}{2 D} \sum_{i=1}^N \sum_{j=1}^N \ln \frac{x_i}{x_j} \ln \frac{y_i}{y_j}
+$$
+
+Norm of $\mathbf{x} \in \mathcal{S}^N$
+$$
+\|\mathbf{x}\|_a=\sqrt{\frac{1}{2 D} \sum_{i=1}^N \sum_{j=1}^N\left(\ln \frac{x_i}{x_j}\right)^2}
+$$
+
+Distance between $\mathbf{x}$ and $\mathbf{y} \in \mathcal{S}^N$
+$$
+d_a(\mathbf{x}, \mathbf{y})=\|\mathbf{x} \ominus \mathbf{x}\|_a=\sqrt{\frac{1}{2 D} \sum_{i=1}^N \sum_{j=1}^N\left(\ln \frac{x_i}{x_j}-\ln \frac{y_i}{y_j}\right)^2}
+$$
+The algebraic-geometric structure of $\mathcal{S}^N$ satisfies standard properties, like compatibility of the distance with perturbation and powering, i.e.
+$$
+\mathrm{N}_a(\mathbf{p} \oplus \mathbf{x}, \mathbf{p} \oplus \mathbf{y})=\mathrm{N}_a(\mathbf{x}, \mathbf{y}), \quad \mathrm{N}_a(\alpha \odot \mathbf{x}, \alpha \odot \mathbf{y})=|\alpha| \mathrm{N}_a(\mathbf{x}, \mathbf{y})
+$$
+for any $\mathbf{x}, \mathbf{y}, \mathbf{p} \in \mathcal{S}^N$ and $\alpha \in \mathbb{R}$. Other typical properties of metric spaces are valid for $\mathcal{S}^N$. 
+
+\subsection{Log ratios}
+Given a composition $\mathbf{x}=\left[\begin{array}{llll}x_1 & x_2 & \cdots & x_N\end{array}\right]$, a general LR is defined as
+$$
+\begin{aligned}
+\operatorname{LR}(j, k)= & \log \left(x_j / x_k\right), \text{where } j \neq k \text{and } j, k \in\{1, \ldots, N\}\\
+=&  \log \left(x_j\right)-\log \left(x_k\right)
+\end{aligned}
+$$
+\subsubsection{ALR}
+$\begin{aligned} \operatorname{ALR}(\mathbf{x}) &=\left[\ln \left(\frac{x_1}{x_N}\right), \ldots, \ln \left(\frac{x_{N-1}}{x_N}\right)\right]^T \\ \operatorname{ALR}^{-1}(\mathbf{y}) &=\mathcal{C}\left(\left[\exp \left(y_1\right), \ldots, \exp \left(y_{N-1}\right), 1\right]^T\right) \end{aligned}$
+
+$y_i$ varies monotonically with $x_i$, ALR is symmetric in the first $N$-1 dimensions, but not in the $N_{th}$. The simplex obtained from ALR is a linear combination of vectors in $\mathbb{R}^{N-1}$ with weights $\ln \left(x_i\right)$. The first $(N-1)$ vectors are the standard basis vectors of $\mathbb{R}^{N-1},\left\{\mathbf{e}_1, \cdots, \mathbf{e}_{N-1}\right\}$, whereas the $N^{t h}$ vector is $-1$. Since $1=\left\|\mathbf{e}_i\right\|<\|-\mathbf{1}\|=\sqrt{N-1}$, for the binary case $N=2$ the ALR transform is symmetric between the two labels, but for $N>2$, changes in the last label's probability are magnified by $\sqrt{N-1}$.  
+
+\subsubsection{ILR}
+$$
+\operatorname{ILR}(\mathbf{p})=U^T \ln (\mathbf{p})
+$$
+$$
+\mathrm{ILR}^{-1}(\mathbf{v})=\mathcal{C}(\exp (U \mathbf{v}))
+$$
+where $\mathcal{C}(\cdot)$ renormalizes and $U=\left[\mathbf{u}_1, \ldots, \mathbf{u}_{L-1}\right]$ is an orthonormal basis for the hyperplane of $\mathbb{R}^L$ orthogonal to 1 . In ILR, the vectors equidistant from each other and from the origin (forming the vertices of a generalized tetrahedron), making ILR symmetric in all N dimensions. ILR maps the Aitchison inner product to the Euclidean inner product (unlike ALR which maps to a skewed euclidean inner product)
+\\
+
+{{insert figure here}}
+
 
 \section{Jacobian Determinants}
 \subsection{Stickbreaking Transform}
@@ -246,4 +321,6 @@ p_Y(y) \propto \prod_{i=1}^{N} \left(1-G(y_i)^{1/(N-i+1)}\right)^{\alpha_i - 1} 
 \]
 where $h$ is a density function.
 Therefore, regardless of the choice of $g$ or $\alpha$, the individual coordinates of the transformed distribution are independently distributed.
+
+
 \end{appendices}
